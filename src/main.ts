@@ -45,12 +45,12 @@ const SETTINGS_SCHEMA = [
     key: 'blockClickMode',
     type: 'enum',
     title: 'Block Click Mode',
-    description: 'Interaction behavior when clicking a block in document mode.',
+    description: 'Interaction behavior in document mode: Protected (click to view, double-click to edit) or Native (click to edit).',
     enumChoices: [
-      'Protected (Default: click to view, double-click to edit)',
-      'Native (Click to edit)',
+      'Protected (Default)',
+      'Native',
     ],
-    default: 'Protected (Default: click to view, double-click to edit)',
+    default: 'Protected (Default)',
   },
   {
     key: 'autoInheritTodo',

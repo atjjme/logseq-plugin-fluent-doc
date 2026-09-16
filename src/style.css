@@ -337,3 +337,13 @@ body.doc-mode-enhanced button {
   cursor: pointer !important;
 }
 
+/* 优化设置面板中的下拉选择框，确保右侧下拉箭头充足展示且不被文字遮挡 */
+.ui__modal select,
+.settings-modal select,
+select.form-select {
+  min-width: 160px !important;
+  padding-right: 32px !important;
+  text-overflow: ellipsis !important;
+  cursor: pointer !important;
+}
+
