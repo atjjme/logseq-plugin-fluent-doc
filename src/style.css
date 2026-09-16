@@ -1,0 +1,339 @@
+/* 胶囊容器根样式：绝对水平、单行排布、自适应宽度、紧凑深色立体浮层阴影 */
+.doc-capsule-root {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  width: max-content !important;
+  height: 34px !important;
+  padding: 3px 8px !important;
+  background: var(--ls-primary-background, #ffffff) !important;
+  color: var(--ls-primary-text-color, #333333) !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.3) !important;
+  border-radius: 8px !important;
+  /* 阴影范围缩小，但颜色明显加深加浓，轮廓清晰立体 */
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+  user-select: none !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
+}
+
+/* 深色模式下的深色紧凑阴影与明亮边框 */
+.dark-theme .doc-capsule-root,
+html[data-theme=dark] .doc-capsule-root {
+  background: var(--ls-primary-background, #202124) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85), 0 1px 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 强力清除 Logseq 官方 float 容器为本插件添加的多余关闭按钮、标题栏、背景与边框 */
+[id*="doc-floating-toolbar"] .draggable-handle,
+[id*="doc-docked-toolbar"] .draggable-handle,
+[id*="doc-floating-toolbar"] > .draggable-handle,
+[id*="doc-docked-toolbar"] > .draggable-handle {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.lsp-ui-float-container[draggable=true] .ls-ui-float-content,
+[id*="doc-floating-toolbar"] .ls-ui-float-content,
+[id*="doc-docked-toolbar"] .ls-ui-float-content {
+  margin-top: 0 !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.lsp-ui-float-container[id*="doc-floating-toolbar"],
+.lsp-ui-float-container[id*="doc-docked-toolbar"],
+div[id*="doc-floating-toolbar"],
+div[id*="doc-docked-toolbar"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: unset !important;
+  max-width: max-content !important;
+  overflow: visible !important;
+}
+
+/* 按钮基础样式 */
+.doc-item-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 24px !important;
+  min-width: 22px !important;
+  padding: 0 4px !important;
+  margin: 0 1px !important;
+  background: transparent;
+  border: none !important;
+  border-radius: 4px !important;
+  color: inherit !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: background-color 0.12s ease !important;
+}
+
+.doc-item-btn:not(.doc-swatch):not(.doc-highlighter):hover {
+  background-color: var(--ls-tertiary-background, rgba(0, 0, 0, 0.08)) !important;
+}
+
+.doc-h-btn {
+  font-weight: 700 !important;
+  font-family: inherit !important;
+}
+
+.doc-bold-btn {
+  font-weight: 800 !important;
+}
+
+.doc-italic-btn {
+  font-style: italic !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+}
+
+.doc-underline-btn {
+  text-decoration: underline !important;
+  font-weight: 600 !important;
+}
+
+.doc-strike-btn {
+  text-decoration: line-through !important;
+  font-weight: 500 !important;
+}
+
+.doc-ref-btn {
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  letter-spacing: -0.5px !important;
+  font-family: monospace, sans-serif !important;
+  color: var(--ls-link-text-color, #106ba3) !important;
+}
+
+.doc-tag-btn {
+  font-weight: 800 !important;
+  font-size: 14px !important;
+  color: var(--ls-link-text-color, #106ba3) !important;
+}
+
+/* 分隔线 */
+.doc-sep {
+  display: inline-block !important;
+  width: 1px !important;
+  height: 14px !important;
+  background-color: var(--ls-border-color, rgba(128, 128, 128, 0.3)) !important;
+  margin: 0 4px !important;
+  vertical-align: middle !important;
+}
+
+/* 颜色圆点 */
+.doc-swatch {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  padding: 0 !important;
+  margin: 0 2px !important;
+  cursor: pointer !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+}
+
+.doc-swatch:hover {
+  transform: scale(1.15) !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25) !important;
+}
+
+.doc-swatch-red, .doc-swatch-red:hover { background-color: #e03e3e !important; }
+.doc-swatch-orange, .doc-swatch-orange:hover { background-color: #d9730d !important; }
+.doc-swatch-green, .doc-swatch-green:hover { background-color: #0f7b6c !important; }
+.doc-swatch-blue, .doc-swatch-blue:hover { background-color: #0b6e99 !important; }
+.doc-swatch-purple, .doc-swatch-purple:hover { background-color: #6940a5 !important; }
+
+/* 高亮矩形块 */
+.doc-highlighter {
+  width: 16px !important;
+  height: 14px !important;
+  min-width: 16px !important;
+  border-radius: 3px !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  padding: 0 !important;
+  margin: 0 2px !important;
+  cursor: pointer !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+}
+
+.doc-highlighter:hover {
+  transform: scale(1.15) !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25) !important;
+}
+
+.doc-hl-yellow, .doc-hl-yellow:hover { background-color: #ffe066 !important; }
+.doc-hl-green, .doc-hl-green:hover { background-color: #ddedea !important; }
+.doc-hl-pink, .doc-hl-pink:hover { background-color: #f4dfeb !important; }
+
+.dark-theme .doc-swatch:hover,
+html[data-theme=dark] .doc-swatch:hover,
+.dark-theme .doc-highlighter:hover,
+html[data-theme=dark] .doc-highlighter:hover {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45) !important;
+}
+
+/* 图标按钮内 SVG */
+.doc-icon-btn svg {
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+/* 链接/图片输入栏样式 */
+.doc-input-bar {
+  gap: 4px !important;
+  padding: 2px 6px !important;
+}
+
+.doc-input-title {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--ls-primary-text-color, #333333) !important;
+  padding-left: 2px !important;
+  white-space: nowrap !important;
+}
+
+.doc-input-title svg {
+  vertical-align: middle !important;
+}
+
+.doc-url-input {
+  height: 24px !important;
+  width: 210px !important;
+  padding: 0 8px !important;
+  border: 1px solid var(--ls-border-color, rgba(0, 0, 0, 0.2)) !important;
+  border-radius: 4px !important;
+  outline: none !important;
+  background: var(--ls-primary-background, #ffffff) !important;
+  color: var(--ls-primary-text-color, #333333) !important;
+  font-size: 12px !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+}
+
+.doc-url-input:focus {
+  border-color: var(--ls-link-text-color, #106ba3) !important;
+  box-shadow: 0 0 0 2px rgba(16, 107, 163, 0.2) !important;
+}
+
+.doc-action-btn {
+  font-weight: 700 !important;
+  padding: 0 6px !important;
+}
+
+.doc-confirm-btn {
+  color: #0f7b6c !important;
+  font-weight: 800 !important;
+}
+
+.doc-cancel-btn {
+  color: #e03e3e !important;
+  font-weight: 800 !important;
+}
+
+/* 只读保护模式下的右键上下文快捷菜单 */
+.doc-context-menu {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 150px !important;
+  padding: 4px 0 !important;
+  background: var(--ls-primary-background, #ffffff) !important;
+  color: var(--ls-primary-text-color, #333333) !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.3) !important;
+  border-radius: 7px !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+  user-select: none !important;
+  font-size: 12px !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+}
+
+.dark-theme .doc-context-menu,
+html[data-theme=dark] .doc-context-menu {
+  background: var(--ls-primary-background, #242528) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.85) !important;
+}
+
+.doc-context-menu-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 6px 12px !important;
+  cursor: pointer !important;
+  color: var(--ls-primary-text-color, #333333) !important;
+  transition: background 0.1s ease !important;
+  white-space: nowrap !important;
+}
+
+.doc-context-menu-item:hover {
+  background: var(--ls-quaternary-background, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--ls-link-text-color, #106ba3) !important;
+}
+
+.doc-context-menu-item .shortcut {
+  opacity: 0.45 !important;
+  font-size: 11px !important;
+  margin-left: 14px !important;
+}
+
+/* 保护模式与沉浸文档模式：强制所有块容器及文字内容支持原生高亮划选，压制 Logseq 的 select-none */
+body.doc-protected-mode .ls-block,
+body.doc-protected-mode .block-main-container,
+body.doc-protected-mode .block-content-wrapper,
+body.doc-protected-mode .block-content,
+body.doc-protected-mode .block-content *,
+body.doc-mode-enhanced .ls-block,
+body.doc-mode-enhanced .block-main-container,
+body.doc-mode-enhanced .block-content-wrapper,
+body.doc-mode-enhanced .block-content,
+body.doc-mode-enhanced .block-content * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* 块内容与文本区域在保护模式下呈现工字型文本光标，提升划选明确度 */
+body.doc-protected-mode .block-content,
+body.doc-protected-mode .block-content-wrapper,
+body.doc-mode-enhanced .block-content,
+body.doc-mode-enhanced .block-content-wrapper {
+  cursor: text !important;
+}
+
+/* 保持大纲功能控件（圆点、折叠箭头、复选框、按钮）不可划选 */
+body.doc-protected-mode .bullet,
+body.doc-protected-mode .bullet-container,
+body.doc-protected-mode .block-control,
+body.doc-protected-mode .form-checkbox,
+body.doc-protected-mode button,
+body.doc-mode-enhanced .bullet,
+body.doc-mode-enhanced .bullet-container,
+body.doc-mode-enhanced .block-control,
+body.doc-mode-enhanced .form-checkbox,
+body.doc-mode-enhanced button {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: pointer !important;
+}
+
