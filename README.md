@@ -1,68 +1,80 @@
-# Logseq Light Doc Enhancer (轻量文档模式与排版格式工具栏)
+# Logseq FluentDoc
 
-一个专为 Logseq 设计的**极轻量、几乎零资源消耗**的文档模式与格式排版助手。
+> 极轻量、呼吸感的文档模式与划词格式工具栏 | Fluent document mode, floating formatting toolbar, and smart productivity booster for Logseq.
+
+[![Release](https://img.shields.io/github/v/release/atjjme/logseq-plugin-fluent-doc?style=flat-square)](https://github.com/atjjme/logseq-plugin-fluent-doc/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
 ---
 
-## 🌟 核心特性
+## 🌟 核心特性 (Features)
 
-1. **浮动划词格式工具栏 (Selection Toolbar)**：
-   - 选中文本时自动在文字正上方弹出微型气泡菜单，不遮挡视线。
+1. **浮动划词格式工具栏 (Selection Floating Toolbar)**：
+   - 选中文本时自动在文字正上方弹出微型气泡菜单，顺手排版不遮挡视线。
    - **字号/标题等级**：一键切换 H1、H2、H3 或正文段落。
-   - **常用强调**：加粗 (`Ctrl+B`)、斜体 (`Ctrl+I`)、清除格式。
-   - **高雅文本颜色**：暗红、橙黄、翠绿、深蓝、雅紫、低调灰等莫兰迪护眼色。
+   - **文本强调**：加粗 (`Ctrl+B`)、斜体 (`Ctrl+I`)、行内代码、清除格式。
+   - **优雅文本颜色**：暗红、橙黄、翠绿、深蓝、雅紫、低调灰等莫兰迪护眼色。
    - **背景高亮**：黄、淡绿、淡蓝、淡粉色高亮背景（或原生 `==` 高亮）。
-   - **超链接与图片**：一键包裹并定位输入。
+   - **超链接与图片**：一键包裹并快捷输入。
    - **TODO 待办**：一键在行首插入或切换待办状态。
-2. **沉浸文档模式视觉增强**：
-   - 点击顶栏 `📄` 图标或按快捷键 `Alt+D` 一键开启/关闭。
-   - 隐藏大纲小圆点与连接竖线，优化中西文字体行高与段落呼吸感。
-   - **无损原生能力**：完全保留 Logseq 原生的双链关联、块引用和图谱生态，不产生任何数据兼容负担。
-3. **极致轻量**：
-   - 零庞大第三方富文本框架，代码体积仅数十 KB。
-   - 平时 CPU 占用为 0%，内存忽略不计。
+2. **沉浸文档模式视觉增强 (Fluent Document Mode)**：
+   - 点击顶栏 `📄` 图标或使用快捷键 `Alt+D` 一键开启/退出。
+   - 智能弱化大纲圆点与连接线，优化中西文字体行高与段间距，带来宛如 Notion / Typora 般的行云流水阅读体验。
+   - **100% 无损原生图谱**：完全保留 Logseq 原生的双链关联、块引用和插件生态，不引入任何侵入式专有语法。
+3. **极致轻量 & 零依赖**：
+   - 零庞大富文本框架包袱，打包体积仅数十 KB。
+   - 深度性能优化，平时几乎零 CPU 占用与极低内存开销。
 
 ---
 
-## 📁 项目存储位置
+## 🚀 安装方式 (Installation)
 
-本项目所有源代码与打包产物均保存在本地：
-`e:\Prejects\Logseq plugin`
+### 方式一：从 Logseq 官方插件商店安装（推荐）
+1. 打开 Logseq，点击右上角 `···` $\to$ **Plugins (插件)** $\to$ **Marketplace (应用商店)**。
+2. 搜索 `FluentDoc`。
+3. 点击 **Install (安装)** 即可一键启用。
 
----
-
-## 🚀 如何在 Logseq 中安装与使用
-
-### 第一步：开启 Logseq 开发者模式
-1. 打开 Logseq。
-2. 点击右上角 `···` $\to$ **设置 (Settings)** $\to$ **高级 (Advanced)**。
-3. 打开 **开发者模式 (Developer Mode)** 开关。
-
-### 第二步：加载插件
-1. 在 Logseq 顶栏或设置中找到 **插件 (Plugins)** 菜单。
-2. 点击右上角的 **"加载已解压的插件" (Load unpacked plugin)**。
-3. 在弹出的文件选择窗口中，选择本项目的目录：
-   `e:\Prejects\Logseq plugin` (或者其中的 `dist` 目录)。
-4. 点击“选择文件夹”，插件将立即加载生效！
+### 方式二：手动下载 Release ZIP 安装
+1. 前往本仓库的 [Releases 页面](../../releases) 下载最新版本的 `logseq-plugin-fluent-doc.zip`。
+2. 解压到本地任意固定目录。
+3. 在 Logseq 中进入 **设置 (Settings)** $\to$ **高级 (Advanced)**，打开 **开发者模式 (Developer Mode)**。
+4. 返回 **Plugins (插件)** 页面，点击右上角的 **"加载已解压的插件" (Load unpacked plugin)**，选择解压后的文件夹即可。
 
 ---
 
-## 🎯 使用指南
+## 🎯 快捷键与使用提示 (Usage)
 
-### 1. 浮动划词工具栏
-- 在任意块的编辑框内，用鼠标选中一段文字。
-- 文字上方会自动浮现半透明微型工具栏。
-- 点击对应图标（如调色盘、高亮笔、标题级别）即可即时完成排版。
-
-### 2. 一键切换沉浸文档模式
-- **方式 A**：点击 Logseq 顶栏右侧新出现的 `📄` 图标。
-- **方式 B**：按下全局快捷键 `Alt+D`。
-- **方式 C**：按 `Ctrl+K` 打开命令面板，输入 `切换沉浸文档增强模式`。
+| 功能 | 快捷键 / 触发方式 | 说明 |
+| :--- | :--- | :--- |
+| **沉浸文档模式切换** | `Alt+D` 或 点击顶栏 `📄` 图标 | 一键在标准大纲树模式与连贯文档模式之间无缝切换 |
+| **命令面板切换** | `Ctrl+K` $\to$ 输入 `切换沉浸文档增强模式` | 快速搜索并执行 |
+| **划词排版工具栏** | 鼠标在编辑框内选中文本 | 自动在选中内容上方弹出悬浮工具条 |
 
 ---
 
-## 🛠️ 二次开发与构建
+## 🛠️ 本地开发与构建 (Development)
 
-如需对源码进行修改：
-- 开发调试：`npm run dev`
-- 打包构建：`npm run build`
+如果你想对插件进行二次开发或定制：
+
+```bash
+# 1. 克隆本仓库
+git clone https://github.com/atjjme/logseq-plugin-fluent-doc.git
+cd logseq-plugin-fluent-doc
+
+# 2. 安装依赖
+npm install
+
+# 3. 开发模式 (实时编译)
+npm run dev
+
+# 4. 生产打包
+npm run build
+```
+
+构建产物将输出在 `dist/` 目录下，在 Logseq 开发者模式下选择该目录即可实时调试。
+
+---
+
+## 📄 开源许可证 (License)
+
+本项目遵循 [MIT License](LICENSE) 开源协议。

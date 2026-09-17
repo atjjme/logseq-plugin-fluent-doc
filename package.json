@@ -1,13 +1,27 @@
 {
   "name": "logseq-plugin-fluent-doc",
   "version": "0.1.0",
-  "private": true,
   "description": "Fluent document mode, floating formatting toolbar, seamless rich-text copy, and smart task list for Logseq.",
+  "author": "atjjme",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atjjme/logseq-plugin-fluent-doc.git"
+  },
+  "keywords": [
+    "logseq",
+    "logseq-plugin",
+    "document-mode",
+    "toolbar",
+    "rich-text"
+  ],
   "type": "module",
   "main": "dist/index.html",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node postbuild.js"
+    "build": "vite build && node postbuild.js",
+    "zip": "node archive.js",
+    "package": "npm run build && node archive.js"
   },
   "logseq": {
     "id": "logseq-plugin-fluent-doc",
