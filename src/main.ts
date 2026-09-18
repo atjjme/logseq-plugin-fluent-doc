@@ -1287,6 +1287,27 @@ async function main() {
   logseq.provideStyle(styleCss);
   logseq.provideStyle(docModeCss);
 
+  const lastFormattedBlockContent = new Map<string, string>();
+
+  // 监听 Logseq 数据库事务，自动格式化已持久化但未排版的中英文块
+  logseq.DB.onChanged(async ({ blocks }) => {
+    if (!isAutoSpacingCjkEnabled()) return;
+    if (!blocks || !Array.isArray(blocks)) return;
+
+    for (const b of blocks) {
+      if (!b || !b.uuid || !b.content) continue;
+      if (lastFormattedBlockContent.get(b.uuid) === b.content) continue;
+
+      const formatted = formatCjkSpacing(b.content);
+      if (formatted !== b.content) {
+        lastFormattedBlockContent.set(b.uuid, formatted);
+        try {
+          await logseq.Editor.updateBlock(b.uuid, formatted);
+        } catch {}
+      }
+    }
+  });
+
   // 2. 宿主生命周期管控：清理旧实例监听器，杜绝热重载残留
   const doc = parent.document;
   const win = parent.window as any;
@@ -2018,7 +2039,32 @@ async function main() {
     true
   );
 
-  // 6. 智能中英文/数字盘古排版：失焦时自动规范间距并回写
+  // 6.1 智能中英文/数字盘古排版：输入法选词上屏（compositionend）后即刻格式化当前输入框
+  addDocListener(
+    'compositionend',
+    (e: CompositionEvent) => {
+      if (!isAutoSpacingCjkEnabled()) return;
+      const target = e.target as HTMLTextAreaElement | null;
+      if (!target || target.tagName !== 'TEXTAREA') return;
+
+      setTimeout(() => {
+        const val = target.value;
+        if (!val) return;
+        const formatted = formatCjkSpacing(val);
+        if (formatted !== val) {
+          const curPos = target.selectionStart ?? val.length;
+          const diff = formatted.length - val.length;
+          target.value = formatted;
+          const newPos = Math.min(formatted.length, curPos + diff);
+          target.setSelectionRange(newPos, newPos);
+          target.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }, 20);
+    },
+    true
+  );
+
+  // 6.2 智能中英文/数字盘古排版：失焦时自动规范间距并回写
   addDocListener(
     'blur',
     async (e: FocusEvent) => {
@@ -2033,8 +2079,11 @@ async function main() {
       if (formatted === val) return;
 
       target.value = formatted;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+
       const uuid = getBlockUuid(target);
       if (uuid) {
+        lastFormattedBlockContent.set(uuid, formatted);
         await logseq.Editor.updateBlock(uuid, formatted);
       }
     },
