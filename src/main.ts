@@ -1220,7 +1220,19 @@ async function main() {
     });
   }
 
+  let todoSpaceTimer: any = null;
+  cleanups.push(() => {
+    if (todoSpaceTimer) {
+      clearInterval(todoSpaceTimer);
+      todoSpaceTimer = null;
+    }
+  });
+
   win.__doc_enhancer_cleanup__ = () => {
+    if (todoSpaceTimer) {
+      clearInterval(todoSpaceTimer);
+      todoSpaceTimer = null;
+    }
     cleanups.forEach((fn) => {
       try { fn(); } catch {}
     });
@@ -1404,28 +1416,91 @@ async function main() {
     true
   );
 
-  // 保证新 TODO 块包含有效空格，并且光标位于空格之后
-  function ensureTodoSpace(keyword: string) {
+  // 辅助获取元素所在块的 blockid
+  function getBlockUuid(el: HTMLElement | null): string {
+    if (!el) return '';
+    const blockEl = (el.closest('[blockid]') || el.closest('.ls-block')) as HTMLElement | null;
+    let uuid = blockEl?.getAttribute('blockid') || '';
+    if (!uuid && blockEl?.id) {
+      const match = blockEl.id.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+      if (match) uuid = match[0];
+    }
+    return uuid;
+  }
+
+  // 保证 TODO 块包含有效空格，并且光标位于空格之后（防止 Logseq 底层或重绘时自动截断空格）
+  function ensureTodoSpace(keyword: string, targetUuid?: string) {
+    if (todoSpaceTimer) {
+      clearInterval(todoSpaceTimer);
+      todoSpaceTimer = null;
+    }
+
     let attempts = 0;
-    const timer = setInterval(() => {
+    todoSpaceTimer = setInterval(() => {
       attempts++;
-      const activeEl = doc.activeElement as HTMLTextAreaElement | null;
+      let activeEl = doc.activeElement as HTMLTextAreaElement | null;
+      if (
+        targetUuid &&
+        (!activeEl || activeEl.tagName !== 'TEXTAREA' || getBlockUuid(activeEl) !== targetUuid)
+      ) {
+        const found = doc.querySelector(
+          `[blockid="${targetUuid}"] textarea, .ls-block[blockid="${targetUuid}"] textarea, textarea.editor-inner`
+        ) as HTMLTextAreaElement | null;
+        if (found) {
+          activeEl = found;
+          if (doc.activeElement !== activeEl) {
+            try {
+              activeEl.focus();
+            } catch {}
+          }
+        }
+      }
+
       if (activeEl && activeEl.tagName === 'TEXTAREA') {
+        if (targetUuid) {
+          const currentUuid = getBlockUuid(activeEl);
+          if (currentUuid && currentUuid !== targetUuid) {
+            if (attempts >= 30) {
+              clearInterval(todoSpaceTimer);
+              todoSpaceTimer = null;
+            }
+            return;
+          }
+        }
+
         const val = activeEl.value;
         if (val === keyword) {
           // 如果被底层截断为无空格的 "TODO"，通过原生编辑命令追加空格，确保触发状态机
           activeEl.setSelectionRange(keyword.length, keyword.length);
-          doc.execCommand('insertText', false, ' ');
-          clearInterval(timer);
-          return;
-        } else if (val.startsWith(keyword + ' ')) {
+          const ok = doc.execCommand('insertText', false, ' ');
+          if (!ok || activeEl.value === keyword) {
+            activeEl.value = keyword + ' ';
+            activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+          }
           activeEl.setSelectionRange(keyword.length + 1, keyword.length + 1);
-          clearInterval(timer);
+        } else if (val.startsWith(keyword + ' ')) {
+          // 确保光标在空格后
+          if (activeEl.selectionStart < keyword.length + 1) {
+            activeEl.setSelectionRange(keyword.length + 1, keyword.length + 1);
+          }
+          // 用户已开始输入正文文字，提前停止守护
+          const rest = val.slice(keyword.length + 1);
+          if (rest.trim().length > 0) {
+            clearInterval(todoSpaceTimer);
+            todoSpaceTimer = null;
+            return;
+          }
+        } else if (!val.startsWith(keyword)) {
+          // 内容已被删除或重写，停止定时器
+          clearInterval(todoSpaceTimer);
+          todoSpaceTimer = null;
           return;
         }
       }
-      if (attempts >= 20) {
-        clearInterval(timer);
+
+      if (attempts >= 30) {
+        clearInterval(todoSpaceTimer);
+        todoSpaceTimer = null;
       }
     }, 20);
   }
@@ -1465,6 +1540,30 @@ async function main() {
         return;
       }
 
+      // 处理 TODO 块中按 Tab / Shift+Tab 缩进/反缩进时空格被 Logseq 自动去掉的问题
+      if (
+        e.key === 'Tab' &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        !e.isComposing &&
+        (e as any).keyCode !== 229 &&
+        isAutoInheritTodoEnabled()
+      ) {
+        const target = e.target as HTMLTextAreaElement | null;
+        if (target && target.tagName === 'TEXTAREA') {
+          const val = target.value;
+          const todoMatch = val.match(/^((?:#{1,6}\s+)?(TODO|DOING|NOW|LATER))\s*$/);
+          if (todoMatch) {
+            const prefix = todoMatch[1];
+            const uuid = getBlockUuid(target);
+            // 允许原生 Tab / Shift+Tab 缩进/反缩进事件正常流转至 Logseq 核心，
+            // 同时启动守护定时器，防止 Logseq 重绘时剥离尾随空格
+            ensureTodoSpace(prefix, uuid || undefined);
+          }
+        }
+      }
+
       // OneNote 风格 TODO 智能连击处理（Enter 延续与二次 Enter 清除）
       if (
         e.key === 'Enter' &&
@@ -1487,12 +1586,7 @@ async function main() {
         const prefix = todoMatch[0];
         const rest = val.slice(prefix.length);
 
-        const blockEl = (target.closest('[blockid]') || target.closest('.ls-block')) as HTMLElement | null;
-        let uuid = blockEl?.getAttribute('blockid') || '';
-        if (!uuid && blockEl?.id) {
-          const match = blockEl.id.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-          if (match) uuid = match[0];
-        }
+        let uuid = getBlockUuid(target);
         if (!uuid) {
           const curBlock = await logseq.Editor.getCurrentBlock();
           uuid = curBlock?.uuid || '';
@@ -1506,6 +1600,11 @@ async function main() {
         if (rest.trim().length === 0) {
           e.preventDefault();
           e.stopPropagation();
+
+          if (todoSpaceTimer) {
+            clearInterval(todoSpaceTimer);
+            todoSpaceTimer = null;
+          }
 
           // 原生删除输入框中的全部字符（清除 TODO 及空格）
           target.select();
@@ -1541,7 +1640,7 @@ async function main() {
 
           if (newBlock?.uuid) {
             await logseq.Editor.editBlock(newBlock.uuid);
-            ensureTodoSpace(keyword);
+            ensureTodoSpace(keyword, newBlock.uuid);
           }
           return;
         }
@@ -1568,12 +1667,7 @@ async function main() {
 
           if (newBlock?.uuid) {
             await logseq.Editor.editBlock(newBlock.uuid);
-            setTimeout(() => {
-              const activeEl = doc.activeElement as HTMLTextAreaElement | null;
-              if (activeEl && activeEl.tagName === 'TEXTAREA') {
-                activeEl.setSelectionRange(keyword.length + 1, keyword.length + 1);
-              }
-            }, 50);
+            ensureTodoSpace(keyword, newBlock.uuid);
           }
           return;
         }
