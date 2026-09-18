@@ -59,10 +59,22 @@ const SETTINGS_SCHEMA = [
     description: 'Press Enter on a TODO block to inherit TODO; press Enter again on an empty TODO block to clear it back to normal text.',
     default: true,
   },
+  {
+    key: 'autoSpacingCjk',
+    type: 'boolean',
+    title: 'Auto-format Chinese-English Spacing',
+    description: 'Automatically insert spaces between Chinese and English/numbers on blur or Enter.',
+    default: true,
+  },
 ];
 
 function isAutoInheritTodoEnabled(): boolean {
   const val = (logseq.settings as any)?.autoInheritTodo;
+  return val !== false; // Default enabled
+}
+
+function isAutoSpacingCjkEnabled(): boolean {
+  const val = (logseq.settings as any)?.autoSpacingCjk;
   return val !== false; // Default enabled
 }
 
@@ -92,6 +104,85 @@ function updateProtectedModeClass(targetDoc?: Document) {
   } else {
     d.body.classList.remove('doc-protected-mode');
   }
+}
+
+/**
+ * 智能中英文/数字盘古间距排版（保护 Markdown 语法、代码、公式与链接）
+ */
+function formatCjkSpacing(content: string): string {
+  if (!content || typeof content !== 'string') return content;
+
+  // 1. 保护代码块、行内代码、公式、URL、双链等特殊语法结构
+  const placeholders: string[] = [];
+  const placeholderPrefix = '\uE000_FLUENT_PANGU_';
+  const placeholderSuffix = '_\uE001';
+
+  let masked = content;
+
+  // 1.1 块级代码与行内代码
+  masked = masked.replace(/(```[\s\S]*?```|`[^`\n]+`)/g, (match) => {
+    placeholders.push(match);
+    return `${placeholderPrefix}${placeholders.length - 1}${placeholderSuffix}`;
+  });
+
+  // 1.2 LaTeX 数学公式
+  masked = masked.replace(/(\$\$[\s\S]*?\$\$|\$[^\$\n]+\$)/g, (match) => {
+    placeholders.push(match);
+    return `${placeholderPrefix}${placeholders.length - 1}${placeholderSuffix}`;
+  });
+
+  // 1.3 属性行 (property:: value)
+  masked = masked.replace(/^([a-zA-Z0-9_\-]+::\s*.*)$/gm, (match) => {
+    placeholders.push(match);
+    return `${placeholderPrefix}${placeholders.length - 1}${placeholderSuffix}`;
+  });
+
+  // 1.4 图片与普通链接的 URL 部分：![alt](url) 或 [text](url)
+  // 保护 (url) 部分，允许对 [text] 中的中英文进行排版
+  masked = masked.replace(/(!?\[[^\]\n]*\])(\([^\)\n]+\))/g, (_match, linkText, linkUrl) => {
+    placeholders.push(linkUrl);
+    return `${linkText}${placeholderPrefix}${placeholders.length - 1}${placeholderSuffix}`;
+  });
+
+  // 1.5 裸 URL
+  masked = masked.replace(/(https?:\/\/[^\s\u4e00-\u9fa5]+)/g, (match) => {
+    placeholders.push(match);
+    return `${placeholderPrefix}${placeholders.length - 1}${placeholderSuffix}`;
+  });
+
+  // 1.6 Logseq 双链与块引用：#[[...]], [[...]], ((uuid))
+  masked = masked.replace(/(#?\[\[[^\]\n]+\]\]|\(\([a-f0-9\-]+\)\))/g, (match) => {
+    placeholders.push(match);
+    return `${placeholderPrefix}${placeholders.length - 1}${placeholderSuffix}`;
+  });
+
+  // 1.7 标签：#tag
+  masked = masked.replace(/(?<!\w)#([^\s#,.:;!?\(\)\[\]{}]+)/g, (match) => {
+    placeholders.push(match);
+    return `${placeholderPrefix}${placeholders.length - 1}${placeholderSuffix}`;
+  });
+
+  // 2. 执行排版格式化：中文字符与英文字符/数字之间插入半角空格
+  // CJK 汉字范围：\u4e00-\u9fa5\u3400-\u4dbf
+  // 英文/数字：[A-Za-z0-9]
+  const cjk = '[\u4e00-\u9fa5\u3400-\u4dbf]';
+  const alnum = '[A-Za-z0-9]';
+
+  // 中文后接英文/数字：中文A -> 中文 A
+  masked = masked.replace(new RegExp(`(${cjk})(${alnum})`, 'g'), '$1 $2');
+
+  // 英文/数字后接中文：A中文 -> A 中文
+  masked = masked.replace(new RegExp(`(${alnum})(${cjk})`, 'g'), '$1 $2');
+
+  // 特殊符号后接中文，如 100%的几率 -> 100% 的几率
+  masked = masked.replace(new RegExp(`([0-9]%)((${cjk}))`, 'g'), '$1 $2');
+
+  // 3. 还原占位符
+  masked = masked.replace(new RegExp(`${placeholderPrefix}(\\d+)${placeholderSuffix}`, 'g'), (_match, index) => {
+    return placeholders[Number(index)] ?? _match;
+  });
+
+  return masked;
 }
 
 /**
@@ -1564,6 +1655,34 @@ async function main() {
         }
       }
 
+      // 智能中英文/数字盘古间距排版：回车换行时先行格式化当前块
+      if (
+        e.key === 'Enter' &&
+        !e.shiftKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        !e.isComposing &&
+        (e as any).keyCode !== 229 &&
+        isAutoSpacingCjkEnabled()
+      ) {
+        const target = e.target as HTMLTextAreaElement | null;
+        if (target && target.tagName === 'TEXTAREA') {
+          const val = target.value;
+          if (val) {
+            const formatted = formatCjkSpacing(val);
+            if (formatted !== val) {
+              const selStart = target.selectionStart ?? val.length;
+              if (selStart >= val.length) {
+                target.value = formatted;
+                target.setSelectionRange(formatted.length, formatted.length);
+                target.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            }
+          }
+        }
+      }
+
       // OneNote 风格 TODO 智能连击处理（Enter 延续与二次 Enter 清除）
       if (
         e.key === 'Enter' &&
@@ -1894,6 +2013,29 @@ async function main() {
         e.stopPropagation();
         const blockUuid = blockEl.getAttribute('blockid');
         showContextMenu(e.clientX, e.clientY, blockUuid);
+      }
+    },
+    true
+  );
+
+  // 6. 智能中英文/数字盘古排版：失焦时自动规范间距并回写
+  addDocListener(
+    'blur',
+    async (e: FocusEvent) => {
+      if (!isAutoSpacingCjkEnabled()) return;
+      const target = e.target as HTMLTextAreaElement | null;
+      if (!target || target.tagName !== 'TEXTAREA') return;
+
+      const val = target.value;
+      if (!val) return;
+
+      const formatted = formatCjkSpacing(val);
+      if (formatted === val) return;
+
+      target.value = formatted;
+      const uuid = getBlockUuid(target);
+      if (uuid) {
+        await logseq.Editor.updateBlock(uuid, formatted);
       }
     },
     true
