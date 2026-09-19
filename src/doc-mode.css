@@ -1,13 +1,16 @@
 /* 沉浸文档模式视觉增强 */
 
-/* 1. 仅隐藏大纲小圆点，保持原有结构与间距不变 */
+/* 1. 隐藏大纲小圆点与折叠小三角，保持原有结构与间距不变 */
 body.doc-mode-enhanced .bullet-container,
-body.doc-mode-enhanced .bullet {
+body.doc-mode-enhanced .bullet,
+body.doc-mode-enhanced .fold-handle,
+body.doc-mode-enhanced .fold-caret {
   opacity: 0 !important;
 }
 
-/* 鼠标悬停到行首时微弱显现，以便仍可拖拽排序 */
-body.doc-mode-enhanced .ls-block:hover > div > .block-control .bullet {
+/* 鼠标悬停到行首时微弱显现，以便仍可折叠与拖拽排序 */
+body.doc-mode-enhanced .ls-block:hover > div > .block-control .bullet,
+body.doc-mode-enhanced .ls-block:hover > div > .block-control .fold-handle {
   opacity: 0.25 !important;
 }
 

@@ -45,7 +45,7 @@ const SETTINGS_SCHEMA = [
     key: 'blockClickMode',
     type: 'enum',
     title: 'Block Click Mode',
-    description: 'Interaction behavior in document mode: Protected (click to view, double-click to edit) or Native (click to edit).',
+    description: 'Interaction behavior: Protected (click to view/select, double-click to edit) or Native (click to edit directly).',
     enumChoices: [
       'Protected (Default)',
       'Native',
@@ -93,7 +93,7 @@ function getBlockClickMode(): 'native' | 'readonly' {
 }
 
 function shouldProtectBlockClick(): boolean {
-  return isDocModeEnhanced && getBlockClickMode() === 'readonly';
+  return getBlockClickMode() === 'readonly';
 }
 
 function updateProtectedModeClass(targetDoc?: Document) {
