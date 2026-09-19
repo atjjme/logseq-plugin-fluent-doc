@@ -1287,27 +1287,6 @@ async function main() {
   logseq.provideStyle(styleCss);
   logseq.provideStyle(docModeCss);
 
-  const lastFormattedBlockContent = new Map<string, string>();
-
-  // 监听 Logseq 数据库事务，自动格式化已持久化但未排版的中英文块
-  logseq.DB.onChanged(async ({ blocks }) => {
-    if (!isAutoSpacingCjkEnabled()) return;
-    if (!blocks || !Array.isArray(blocks)) return;
-
-    for (const b of blocks) {
-      if (!b || !b.uuid || !b.content) continue;
-      if (lastFormattedBlockContent.get(b.uuid) === b.content) continue;
-
-      const formatted = formatCjkSpacing(b.content);
-      if (formatted !== b.content) {
-        lastFormattedBlockContent.set(b.uuid, formatted);
-        try {
-          await logseq.Editor.updateBlock(b.uuid, formatted);
-        } catch {}
-      }
-    }
-  });
-
   // 2. 宿主生命周期管控：清理旧实例监听器，杜绝热重载残留
   const doc = parent.document;
   const win = parent.window as any;
@@ -2083,7 +2062,6 @@ async function main() {
 
       const uuid = getBlockUuid(target);
       if (uuid) {
-        lastFormattedBlockContent.set(uuid, formatted);
         await logseq.Editor.updateBlock(uuid, formatted);
       }
     },
