@@ -93,7 +93,7 @@ function getBlockClickMode(): 'native' | 'readonly' {
 }
 
 function shouldProtectBlockClick(): boolean {
-  return getBlockClickMode() === 'readonly';
+  return isDocModeEnhanced && getBlockClickMode() === 'readonly';
 }
 
 function updateProtectedModeClass(targetDoc?: Document) {
@@ -889,6 +889,7 @@ function renderDockedToolbar() {
 function toggleEnhancedDocMode() {
   isDocModeEnhanced = !isDocModeEnhanced;
   const doc = parent.document;
+  updateProtectedModeClass(doc);
 
   if (isDocModeEnhanced) {
     doc.body.classList.add('doc-mode-enhanced');
@@ -1194,81 +1195,64 @@ function getActiveSelectionInfo(doc: Document): {
   end?: number;
   coords: { x: number; y: number } | null;
 } | null {
-  // 1. 检查编辑态 Textarea（优先检查 activeElement，若因挂载失焦则查找全局唯一的块编辑框）
-  let ta: HTMLTextAreaElement | null = null;
+  const displayMode = getToolbarDisplayMode();
+  if (displayMode === 'docked' || displayMode === 'none') {
+    return null;
+  }
+
+  // 1. 检查当前获得焦点的输入框（仅限 activeElement，绝不全局遍历 DOM）
   const activeEl = doc.activeElement;
   if (isTextareaOrInput(activeEl)) {
-    ta = activeEl as HTMLTextAreaElement;
-  } else {
-    ta = doc.querySelector('textarea.editor-inner, .ls-block textarea, textarea') as HTMLTextAreaElement | null;
-  }
-
-  if (
-    ta &&
-    typeof ta.selectionStart === 'number' &&
-    typeof ta.selectionEnd === 'number' &&
-    ta.selectionStart !== ta.selectionEnd
-  ) {
-    const text = ta.value.substring(ta.selectionStart, ta.selectionEnd).trim();
-    if (text.length > 0) {
-      const blockEl = ta.closest('[blockid]') || ta.closest('.ls-block');
-      const blockUuid = blockEl?.getAttribute('blockid') || null;
-      const rect = ta.getBoundingClientRect();
-      const coords = { x: rect.left + rect.width / 2, y: rect.top };
-      return {
-        text,
-        blockUuid,
-        start: ta.selectionStart,
-        end: ta.selectionEnd,
-        coords,
-      };
-    }
-  }
-
-  // 2. 检查阅读/文档模式态（标准 DOM 选区，全面支持单行与跨行多块选区）
-  const sel = doc.getSelection();
-  if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) {
-    const text = sel.toString().trim();
-    if (sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0);
-      let rect = range.getBoundingClientRect();
-
-      // 跨块/跨行选区强化计算：若 getBoundingClientRect 因跨不同 DOM 分支出现 0 尺寸，采用 getClientRects 联合包围盒
-      const clientRects = Array.from(range.getClientRects()).filter((r) => r.width > 0 && r.height > 0);
-      if ((!rect || (rect.width === 0 && rect.height === 0)) && clientRects.length > 0) {
-        const top = Math.min(...clientRects.map((r) => r.top));
-        const bottom = Math.max(...clientRects.map((r) => r.bottom));
-        const left = Math.min(...clientRects.map((r) => r.left));
-        const right = Math.max(...clientRects.map((r) => r.right));
-        rect = new DOMRect(left, top, Math.max(right - left, 10), Math.max(bottom - top, 10));
-      }
-
-      if (rect && (rect.width > 0 || rect.height > 0 || clientRects.length > 0)) {
-        const anchorNode = sel.anchorNode;
-        const anchorEl = anchorNode?.nodeType === 1 ? (anchorNode as HTMLElement) : anchorNode?.parentElement;
-        const blockEl = anchorEl?.closest('[blockid]') || anchorEl?.closest('.ls-block');
+    const ta = activeEl as HTMLTextAreaElement;
+    if (
+      typeof ta.selectionStart === 'number' &&
+      typeof ta.selectionEnd === 'number' &&
+      ta.selectionStart !== ta.selectionEnd
+    ) {
+      const text = ta.value.substring(ta.selectionStart, ta.selectionEnd).trim();
+      if (text.length > 0) {
+        const blockEl = (ta.closest('[blockid]') || ta.closest('.ls-block')) as HTMLElement | null;
         const blockUuid = blockEl?.getAttribute('blockid') || null;
-
-        // 多行大段选中时，智能定位到视口内首个可见行顶部，保证气泡随处可见且紧随选区
-        let topY = rect.top;
-        if (clientRects.length > 1) {
-          const winH = parent.window?.innerHeight || 800;
-          const visibleRects = clientRects.filter((r) => r.bottom > 50 && r.top < winH - 20);
-          if (visibleRects.length > 0) {
-            topY = visibleRects[0].top;
-          }
-        }
-
+        const rect = ta.getBoundingClientRect();
         return {
           text,
           blockUuid,
-          coords: { x: rect.left + rect.width / 2, y: topY },
+          start: ta.selectionStart,
+          end: ta.selectionEnd,
+          coords: { x: rect.left + rect.width / 2, y: rect.top },
         };
       }
     }
+    return null;
   }
 
-  return null;
+  // 2. 检查普通 DOM 选区 (阅读态/文档模式)
+  const sel = doc.getSelection();
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+    return null;
+  }
+
+  const text = sel.toString().trim();
+  if (!text) return null;
+
+  try {
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return null;
+
+    const anchorNode = sel.anchorNode;
+    const anchorEl = anchorNode?.nodeType === 1 ? (anchorNode as HTMLElement) : anchorNode?.parentElement;
+    const blockEl = (anchorEl?.closest('[blockid]') || anchorEl?.closest('.ls-block')) as HTMLElement | null;
+    const blockUuid = blockEl?.getAttribute('blockid') || null;
+
+    return {
+      text,
+      blockUuid,
+      coords: { x: rect.left + rect.width / 2, y: rect.top },
+    };
+  } catch {
+    return null;
+  }
 }
 
 async function main() {
@@ -1284,8 +1268,8 @@ async function main() {
   });
 
   // 1. 注入 CSS 样式
-  logseq.provideStyle(styleCss);
-  logseq.provideStyle(docModeCss);
+  logseq.provideStyle({ key: 'fluent-doc-style', style: styleCss });
+  logseq.provideStyle({ key: 'fluent-doc-mode-style', style: docModeCss });
 
   // 2. 宿主生命周期管控：清理旧实例监听器，杜绝热重载残留
   const doc = parent.document;
@@ -1314,14 +1298,14 @@ async function main() {
   let todoSpaceTimer: any = null;
   cleanups.push(() => {
     if (todoSpaceTimer) {
-      clearInterval(todoSpaceTimer);
+      clearTimeout(todoSpaceTimer);
       todoSpaceTimer = null;
     }
   });
 
   win.__doc_enhancer_cleanup__ = () => {
     if (todoSpaceTimer) {
-      clearInterval(todoSpaceTimer);
+      clearTimeout(todoSpaceTimer);
       todoSpaceTimer = null;
     }
     cleanups.forEach((fn) => {
@@ -1445,8 +1429,14 @@ async function main() {
         return;
       }
 
-      // 官方 onInputSelectionEnd 刚触发（400ms 内），直接交由官方钩子，不误杀
-      if (Date.now() - lastInputSelectionTime < 400) {
+      const displayMode = getToolbarDisplayMode();
+      if (displayMode === 'docked' || displayMode === 'none') {
+        if (isFloatingToolbarOpen) hideFloatingToolbar();
+        return;
+      }
+
+      // 官方 onInputSelectionEnd 刚触发（300ms 内），直接交由官方钩子，不误杀
+      if (Date.now() - lastInputSelectionTime < 300) {
         return;
       }
 
@@ -1454,31 +1444,22 @@ async function main() {
         mouseDownPos !== null &&
         Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y) > 4;
 
-      const target = e.target as HTMLElement | null;
-      const isTextarea = target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT');
-
-      // 检查当前是否有有效文本选区
       const sel = doc.getSelection();
-      const hasDomSelection = sel && !sel.isCollapsed && sel.toString().trim().length > 0;
+      const hasDomSelection = Boolean(sel && !sel.isCollapsed && sel.toString().trim().length > 0);
 
-      // 核心拦截：保护模式下划选正文（单行或跨行多选）时，阻止 mouseup 冒泡到 Logseq 核心，杜绝其 clear_selection 抹除文字选区！
-      if (shouldProtectBlockClick() && !isTextarea && hasDomSelection) {
+      // 核心拦截：仅在只读保护模式开启且划选了文字时阻止冒泡
+      if (shouldProtectBlockClick() && hasDomSelection) {
         e.stopPropagation();
       }
 
-      setTimeout(async () => {
-        if (Date.now() - lastInputSelectionTime < 400) {
+      setTimeout(() => {
+        if (Date.now() - lastInputSelectionTime < 300) {
           return;
         }
 
         const selInfo = getActiveSelectionInfo(doc);
 
         if (selInfo && selInfo.text.length > 0 && selInfo.coords) {
-          if (!selInfo.blockUuid) {
-            const curBlock = await logseq.Editor.getCurrentBlock();
-            selInfo.blockUuid = curBlock?.uuid || null;
-          }
-
           currentSelection = {
             text: selInfo.text,
             blockUuid: selInfo.blockUuid,
@@ -1498,7 +1479,7 @@ async function main() {
           showFloatingToolbar(selInfo.coords.x, selInfo.coords.y);
         } else {
           // 无选区：仅当用户明确单击空白处（非拖拽划词过程中）才收起
-          if (!isDrag) {
+          if (!isDrag && isFloatingToolbarOpen) {
             hideFloatingToolbar();
           }
         }
@@ -1522,46 +1503,20 @@ async function main() {
   // 保证 TODO 块包含有效空格，并且光标位于空格之后（防止 Logseq 底层或重绘时自动截断空格）
   function ensureTodoSpace(keyword: string, targetUuid?: string) {
     if (todoSpaceTimer) {
-      clearInterval(todoSpaceTimer);
+      clearTimeout(todoSpaceTimer);
       todoSpaceTimer = null;
     }
 
-    let attempts = 0;
-    todoSpaceTimer = setInterval(() => {
-      attempts++;
-      let activeEl = doc.activeElement as HTMLTextAreaElement | null;
-      if (
-        targetUuid &&
-        (!activeEl || activeEl.tagName !== 'TEXTAREA' || getBlockUuid(activeEl) !== targetUuid)
-      ) {
-        const found = doc.querySelector(
-          `[blockid="${targetUuid}"] textarea, .ls-block[blockid="${targetUuid}"] textarea, textarea.editor-inner`
-        ) as HTMLTextAreaElement | null;
-        if (found) {
-          activeEl = found;
-          if (doc.activeElement !== activeEl) {
-            try {
-              activeEl.focus();
-            } catch {}
-          }
-        }
-      }
-
+    const checkAndFix = () => {
+      const activeEl = doc.activeElement as HTMLTextAreaElement | null;
       if (activeEl && activeEl.tagName === 'TEXTAREA') {
         if (targetUuid) {
-          const currentUuid = getBlockUuid(activeEl);
-          if (currentUuid && currentUuid !== targetUuid) {
-            if (attempts >= 30) {
-              clearInterval(todoSpaceTimer);
-              todoSpaceTimer = null;
-            }
-            return;
-          }
+          const curUuid = getBlockUuid(activeEl);
+          if (curUuid && curUuid !== targetUuid) return;
         }
 
         const val = activeEl.value;
         if (val === keyword) {
-          // 如果被底层截断为无空格的 "TODO"，通过原生编辑命令追加空格，确保触发状态机
           activeEl.setSelectionRange(keyword.length, keyword.length);
           const ok = doc.execCommand('insertText', false, ' ');
           if (!ok || activeEl.value === keyword) {
@@ -1570,30 +1525,16 @@ async function main() {
           }
           activeEl.setSelectionRange(keyword.length + 1, keyword.length + 1);
         } else if (val.startsWith(keyword + ' ')) {
-          // 确保光标在空格后
           if (activeEl.selectionStart < keyword.length + 1) {
             activeEl.setSelectionRange(keyword.length + 1, keyword.length + 1);
           }
-          // 用户已开始输入正文文字，提前停止守护
-          const rest = val.slice(keyword.length + 1);
-          if (rest.trim().length > 0) {
-            clearInterval(todoSpaceTimer);
-            todoSpaceTimer = null;
-            return;
-          }
-        } else if (!val.startsWith(keyword)) {
-          // 内容已被删除或重写，停止定时器
-          clearInterval(todoSpaceTimer);
-          todoSpaceTimer = null;
-          return;
         }
       }
+    };
 
-      if (attempts >= 30) {
-        clearInterval(todoSpaceTimer);
-        todoSpaceTimer = null;
-      }
-    }, 20);
+    // 采用极轻量的两段微延时检查，彻底告别 20ms 密集轮询
+    setTimeout(checkAndFix, 30);
+    todoSpaceTimer = setTimeout(checkAndFix, 120);
   }
 
   addDocListener(
@@ -2018,10 +1959,10 @@ async function main() {
     true
   );
 
-  // 6.1 智能中英文/数字盘古排版：失焦时自动规范间距并回写
+  // 6.1 智能中英文/数字盘古排版：失焦时自动规范间距
   addDocListener(
     'blur',
-    async (e: FocusEvent) => {
+    (e: FocusEvent) => {
       if (!isAutoSpacingCjkEnabled()) return;
       const target = e.target as HTMLTextAreaElement | null;
       if (!target || target.tagName !== 'TEXTAREA') return;
@@ -2034,20 +1975,26 @@ async function main() {
 
       target.value = formatted;
       target.dispatchEvent(new Event('input', { bubbles: true }));
-
-      const uuid = getBlockUuid(target);
-      if (uuid) {
-        await logseq.Editor.updateBlock(uuid, formatted);
-      }
     },
     true
   );
 
-  // 滚动或滚轮滚动时，自动收起右键菜单以防止菜单悬空
-  addDocListener('scroll', () => hideContextMenu(), true);
-  addDocListener('wheel', () => {
-    if (isContextMenuOpen) hideContextMenu();
-  }, true);
+  // 滚动时快速收起弹出层（前置状态判断，无弹层时 0 开销）
+  addDocListener(
+    'scroll',
+    () => {
+      if (isContextMenuOpen) hideContextMenu();
+      if (isFloatingToolbarOpen) hideFloatingToolbar();
+    },
+    true
+  );
+  addDocListener(
+    'wheel',
+    () => {
+      if (isContextMenuOpen) hideContextMenu();
+    },
+    true
+  );
 
   // 7. Register top bar main icon
   logseq.App.registerUIItem('toolbar', {
