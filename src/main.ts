@@ -1796,7 +1796,7 @@ async function main() {
   );
 
   addDocListener('keyup', (e: KeyboardEvent) => {
-    if (e.key.startsWith('Arrow') || e.key === 'Shift') {
+    if (e.key.startsWith('Arrow')) {
       setTimeout(async () => {
         if (Date.now() - lastInputSelectionTime < 400) return;
         const selInfo = getActiveSelectionInfo(doc);
@@ -2018,32 +2018,7 @@ async function main() {
     true
   );
 
-  // 6.1 智能中英文/数字盘古排版：输入法选词上屏（compositionend）后即刻格式化当前输入框
-  addDocListener(
-    'compositionend',
-    (e: CompositionEvent) => {
-      if (!isAutoSpacingCjkEnabled()) return;
-      const target = e.target as HTMLTextAreaElement | null;
-      if (!target || target.tagName !== 'TEXTAREA') return;
-
-      setTimeout(() => {
-        const val = target.value;
-        if (!val) return;
-        const formatted = formatCjkSpacing(val);
-        if (formatted !== val) {
-          const curPos = target.selectionStart ?? val.length;
-          const diff = formatted.length - val.length;
-          target.value = formatted;
-          const newPos = Math.min(formatted.length, curPos + diff);
-          target.setSelectionRange(newPos, newPos);
-          target.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      }, 20);
-    },
-    true
-  );
-
-  // 6.2 智能中英文/数字盘古排版：失焦时自动规范间距并回写
+  // 6.1 智能中英文/数字盘古排版：失焦时自动规范间距并回写
   addDocListener(
     'blur',
     async (e: FocusEvent) => {
