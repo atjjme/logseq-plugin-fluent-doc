@@ -11,6 +11,11 @@ if (fs.existsSync('README.md')) {
   fs.copyFileSync('README.md', 'dist/README.md');
 }
 
+// 复制 CHANGELOG.md
+if (fs.existsSync('CHANGELOG.md')) {
+  fs.copyFileSync('CHANGELOG.md', 'dist/CHANGELOG.md');
+}
+
 // 复制 LICENSE
 if (fs.existsSync('LICENSE')) {
   fs.copyFileSync('LICENSE', 'dist/LICENSE');
